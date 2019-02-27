@@ -2,12 +2,12 @@
 Some notes regarding configuration of aws services in serverless framework.
 
 TODO:
-- commandline tool w nodejs
-- many providers examples
-- uses cloud orcestrators
-- what you can do with it
-- plugins
-- how often its updated - situation with websockets
+- what it is (commandline tool w nodejs)
+- what is supported (many providers examples)
+- how it works under the hood (uses cloud orcestrators show example)
+- what you can do with it (avaiable commands and what do they do)
+- what if something isnt avaiable (plugins)
+- how often its updated (situation with websockets)
 
 ## Preparations
 Before u start u'll need aws account, awscli and serverless framework. After that u'll need to configure new profile (security reasons) and credentials
