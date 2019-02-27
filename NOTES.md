@@ -1,4 +1,4 @@
-# aws-serverless-test
+# AWS Serverless notes
 Some notes regarding configuration of aws services in serverless framework.
 
 ## Preparations
