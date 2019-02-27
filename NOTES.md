@@ -3,6 +3,7 @@ Some notes regarding configuration of aws services in serverless framework.
 
 TODO:
 - what it is (commandline tool w nodejs)
+- talk about how it's useful in our environment (no need for backend)
 - what is supported (many providers examples)
 - how it works under the hood (uses cloud orcestrators show example)
 - what you can do with it (avaiable commands and what do they do)
