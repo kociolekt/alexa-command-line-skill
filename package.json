@@ -1,0 +1,20 @@
+{
+  "name": "cli-alexa-skill",
+  "version": "1.0.0",
+  "main": "index.js",
+  "dependencies": {
+    "aws-sdk": "^2.411.0",
+    "sanitize-html": "^1.20.0"
+  },
+  "devDependencies": {
+    "serverless-websockets-plugin": "^1.0.0",
+    "serverless-alexa-skills": "^0.1.0"
+  },
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "",
+  "license": "MIT",
+  "keywords": [],
+  "description": ""
+}

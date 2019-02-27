@@ -1,0 +1,135 @@
+service:
+  name: command-line
+
+provider:
+  name: aws
+  runtime: nodejs8.10
+  stackName: ${self:service}-${self:provider.stage}
+  stage: ${opt:stage, 'dev'}
+  region: ${opt:region, 'us-east-1'}
+  profile: serverless-terminator # The default profile to use with this service
+  iamRoleStatements:
+    - Effect: Allow
+      Action:
+        - "execute-api:ManageConnections"
+      Resource:
+        - "arn:aws:execute-api:*:*:**/@connections/*"
+    - Effect: Allow
+      Action:
+        - "dynamodb:PutItem"
+        - "dynamodb:GetItem"
+        - "dynamodb:UpdateItem"
+        - "dynamodb:DeleteItem"
+        - "dynamodb:BatchGetItem"
+        - "dynamodb:BatchWriteItem"
+        - "dynamodb:Query"
+        - "dynamodb:Scan"
+      Resource:
+        - Fn::GetAtt: [ConnectionsTableDynamoDBTable, Arn]
+        - Fn::Join:
+            - '/'
+            - - Fn::GetAtt: [ConnectionsTableDynamoDBTable, Arn]
+              - '*'
+  environment:
+    TABLE_NAME:
+      Ref: ConnectionsTableDynamoDBTable
+
+  # optional
+  websocketApiName: ${self:service}-${self:provider.stage}
+
+  # required for websocket apis
+  # this selects from your payload what your "routeKey" parameter is
+  # from the websocket event types on your function
+  websocketApiRouteSelectionExpression: $request.body.action
+
+
+plugins:
+  - serverless-alexa-skills
+
+functions:
+  # manage connection and disconnection of clients
+  onConnect:
+    handler: src/onConnect.handler
+    events:
+      - websocket: $connect
+
+  onDisconnect:
+    handler: src/onDisconnect.handler
+    events:
+      - websocket: $disconnect
+
+  # hsendMessage - echo function for testing
+# {"action": "sendMessage", "data": "test"}
+  sendMessage:
+    handler: src/sendMessage.handler
+    events:
+      - websocket: sendMessage
+
+  # TODO:
+  # just in case we are getting weird / bad data
+  # we can react to it with a sane response
+  #defaultMessages:
+  #  handler: src/handler.defaultMessage
+  #  events:
+  #    - websocket: 
+  #        route: $default
+  #        routeKey: $default
+
+  skill:
+    handler: src/skill.handler
+    events:
+      - alexaSkill:
+          appId: ${self:custom.skillId}
+          enabled: true
+
+custom:
+  skillId: amzn1.ask.skill.d02583d1-3da3-4c52-b1c8-2bea58674ef2
+  alexa:
+    skills:
+      - id: ${self:custom.skillId}
+        skillManifest:
+          publishingInformation:
+            locales:
+              en-US:
+                name: command-line
+          apis:
+            custom: {}
+          manifestVersion: '1.0'
+        models:
+          en-US:
+            interactionModel:
+              languageModel:
+                invocationName: command line
+                intents:
+                  - name: AMAZON.CancelIntent
+                    samples: []
+                  - name: AMAZON.HelpIntent
+                    samples: []
+                  - name: AMAZON.StopIntent
+                    samples: []
+                  - name: CommandsList
+                    samples:
+                    - list
+                    - commands
+                    - help
+
+resources:
+  Resources: 
+    ConnectionsTableDynamoDBTable: 
+      Type: "AWS::DynamoDB::Table"
+      Properties: 
+        AttributeDefinitions: 
+          - AttributeName: recordType
+            AttributeType: S 
+          - AttributeName: recordId
+            AttributeType: S
+        KeySchema: 
+          - AttributeName: recordType
+            KeyType: HASH
+          - AttributeName: recordId
+            KeyType: RANGE
+        ProvisionedThroughput: 
+          ReadCapacityUnits: 5
+          WriteCapacityUnits: 5
+        SSESpecification: 
+          SSEEnabled: true
