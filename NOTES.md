@@ -1,6 +1,7 @@
 # AWS Serverless notes
 Some notes regarding configuration of aws services in serverless framework.
 
+TODO:
 - commandline tool w nodejs
 - many providers examples
 - uses cloud orcestrators
