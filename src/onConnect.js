@@ -7,7 +7,7 @@ exports.handler = async (event, context, callback) => {
   console.log('onConnect');
   console.log(event.requestContext.connectionId);
   try {
-    let result = await db.connection.add(event.requestContext.connectionId);
+    let result = await db.connections.add(event.requestContext.connectionId);
     console.log(result);
     callback(null, {
       statusCode: 200,

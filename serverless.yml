@@ -25,14 +25,14 @@ provider:
         - "dynamodb:Query"
         - "dynamodb:Scan"
       Resource:
-        - Fn::GetAtt: [ConnectionsTableDynamoDBTable, Arn]
+        - Fn::GetAtt: [ApplicationDynamoDBTable, Arn]
         - Fn::Join:
             - '/'
-            - - Fn::GetAtt: [ConnectionsTableDynamoDBTable, Arn]
+            - - Fn::GetAtt: [ApplicationDynamoDBTable, Arn]
               - '*'
   environment:
     TABLE_NAME:
-      Ref: ConnectionsTableDynamoDBTable
+      Ref: ApplicationDynamoDBTable
 
   # optional
   websocketApiName: ${self:service}-${self:provider.stage}
@@ -45,6 +45,7 @@ provider:
 
 plugins:
   - serverless-alexa-skills
+  - serverless-dotenv-plugin
 
 functions:
   # manage connection and disconnection of clients
@@ -79,21 +80,22 @@ functions:
     handler: src/skill.handler
     events:
       - alexaSkill:
-          appId: ${self:custom.skillId}
+          appId: amzn1.ask.skill.d02583d1-3da3-4c52-b1c8-2bea58674ef2
           enabled: true
 
 custom:
-  skillId: amzn1.ask.skill.d02583d1-3da3-4c52-b1c8-2bea58674ef2
   alexa:
     skills:
-      - id: ${self:custom.skillId}
-        skillManifest:
+      - id: amzn1.ask.skill.d02583d1-3da3-4c52-b1c8-2bea58674ef2
+        manifest:
           publishingInformation:
             locales:
               en-US:
                 name: command-line
           apis:
-            custom: {}
+            custom:
+              endpoint:
+                uri: arn:aws:lambda:us-east-1:220130740175:function:command-line-dev-skill
           manifestVersion: '1.0'
         models:
           en-US:
@@ -107,27 +109,29 @@ custom:
                     samples: []
                   - name: AMAZON.StopIntent
                     samples: []
-                  - name: CommandsList
+                  - name: AMAZON.YesIntent
+                    samples: []
+                  - name: List
                     samples:
                     - list
                     - commands
-                    - help
+                    - list commands
+                    - list avaiable commands
+                    - avaiable commands
+                    
 
 resources:
   Resources: 
-    ConnectionsTableDynamoDBTable: 
+    ApplicationDynamoDBTable: 
       Type: "AWS::DynamoDB::Table"
       Properties: 
+        TableName: ${env:TABLE_NAME}
         AttributeDefinitions: 
-          - AttributeName: recordType
-            AttributeType: S 
-          - AttributeName: recordId
+          - AttributeName: RecordType
             AttributeType: S
         KeySchema: 
-          - AttributeName: recordType
+          - AttributeName: RecordType
             KeyType: HASH
-          - AttributeName: recordId
-            KeyType: RANGE
         ProvisionedThroughput: 
           ReadCapacityUnits: 5
           WriteCapacityUnits: 5

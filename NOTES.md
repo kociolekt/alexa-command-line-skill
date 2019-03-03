@@ -2,16 +2,22 @@
 Some notes regarding configuration of aws services in serverless framework.
 
 TODO:
+Theory
 - what it is (commandline tool w nodejs)
-- talk about how it's useful in our environment (no need for backend)
 - what is supported (many providers examples)
+
 - how it works under the hood (uses cloud orcestrators show example)
-- what you can do with it (avaiable commands and what do they do)
-- what if something isnt avaiable (plugins)
+
+- what you can do with it (avaiable commands and what do they do, plugins)
+- talk about how it's useful in our environment (no need for backend)
+
 - how often its updated (situation with websockets)
 
+Practice
+- serverless ans sls as alias
+
 ## Preparations
-Before u start u'll need aws account, awscli and serverless framework. After that u'll need to configure new profile (security reasons) and credentials
+Before you start you'll need aws account, awscli and serverless framework. After that you'll need to configure new profile (security reasons) and credentials
 
 ### Setup aws account
 1. Go to https://portal.aws.amazon.com/gp/aws/developer/registration/index.html?nc2=h_ct&src=header_signup 
@@ -33,7 +39,7 @@ npm install -g serverless
 
 ### Setup new profile
 Based on https://serverless.com/framework/docs/providers/aws/guide/credentials/
-1. Create new user in https://console.aws.amazon.com/iam/home?region=us-east-1#/users with proper privilages. If u don't know what privilages'll be needed then set AdministratorAccess like in https://www.youtube.com/watch?v=bFHmgqbAh4M.
+1. Create new user in https://console.aws.amazon.com/iam/home?region=us-east-1#/users with proper privilages. If you don't know what privilages'll be needed then set AdministratorAccess like in https://www.youtube.com/watch?v=bFHmgqbAh4M.
 2. Generate AWS Access Key ID and AWS Secret Access Key like in video.
 3. Create new profile o your machine
 ```
@@ -58,7 +64,7 @@ This way it's possible to withdraw all access rights for one app in one click.
 Let's create first lambda function with serverless!
 
 ### Create serverless.yml
-Full serverless.yml example is available here: https://serverless.com/framework/docs/providers/aws/guide/serverless.yml/ but u'll need only a fraction of this.
+Full serverless.yml example is available here: https://serverless.com/framework/docs/providers/aws/guide/serverless.yml/ but you'll need only a fraction of this.
 For first example we'll create Alexa skill!
 1. Create package.json and install dependencies
 ```

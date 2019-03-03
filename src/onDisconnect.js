@@ -5,7 +5,7 @@ const db = require('./db');
 
 exports.handler = async (event, context, callback) => {
   try {
-    let result = await db.connection.del(event.requestContext.connectionId);
+    let result = await db.connections.del(event.requestContext.connectionId);
 
     callback(null, {
       statusCode: 200,

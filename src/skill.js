@@ -1,88 +1,99 @@
 /* eslint-disable  func-names */
 /* eslint-disable  no-console */
+require('dotenv').config();
 
 const Alexa = require('ask-sdk');
+const db = require('./db');
 
-WELCOME_MESSAGE = 'Welcome in alexa command line.';
-NO_MACHINE_MESSAGE = 'You have no machines assigned. Would you like to assign one now?';
+const WELCOME_MESSAGE = 'Welcome in alexa command line.';
+const NO_MACHINES_MESSAGE = 'You have no machines assigned. Would you like to assign one now?';
+const HELP_MESSAGE = 'In command line I can run defined command on connected machines. I can give you the list of avaiable commands or connected machines.';
+const HELP_REPROMPT = 'Would you like me to repeat?';
+const STOP_MESSAGE = 'Exited command line.';
+const YES_MESSAGE = 'Nothing to confirm.';
 
+const handlers = {};
 
-const LaunchHandler = {
+handlers.LaunchHandler = {
   canHandle(handlerInput) {
     const request = handlerInput.requestEnvelope.request;
     return request.type === 'LaunchRequest';
   },
-  handle(handlerInput) {
-    const speechOutput = WELCOME_MESSAGE;
+  async handle(handlerInput) {
+    let machines = (await db.machines.getAllByUser(handlerInput.requestEnvelope.session.user.userId)).Items;
 
-    return handlerInput.responseBuilder
-      .speak(speechOutput)
+    if(machines.length > 0) {
+      return handlerInput.responseBuilder
+      .speak(WELCOME_MESSAGE)
       .reprompt('')
       .getResponse();
-  },
-};
-
-const GetNewFactHandler = {
-  canHandle(handlerInput) {
-    const request = handlerInput.requestEnvelope.request;
-    return (request.type === 'IntentRequest'
-        && request.intent.name === 'GetNewFactIntent');
-  },
-  handle(handlerInput) {
-    const factArr = data;
-    const factIndex = Math.floor(Math.random() * factArr.length);
-    const randomFact = factArr[factIndex];
-    const speechOutput = randomFact;
-
-    return handlerInput.responseBuilder
-      .speak(speechOutput)
-      .reprompt('')
-      .getResponse();
-  },
-};
-
-const SaveItemHandler = {
-  canHandle(handlerInput) {
-    const request = handlerInput.requestEnvelope.request;
-    return (request.type === 'IntentRequest'
-        && request.intent.name === 'SaveItemIntent');
-  },
-  handle(handlerInput) {
-    const color = handlerInput.requestEnvelope.request.intent.slots.item.value;
-    const AWS = require('aws-sdk');
-    const ddb = new AWS.DynamoDB({apiVersion: '2012-10-08'});
-    AWS.config.update({region: 'eu-west-1'});
-    let sessionAttributes = handlerInput.attributesManager.getSessionAttributes();
-    if (sessionAttributes.color == undefined) {
-      sessionAttributes.color =  [color];
     } else {
-      sessionAttributes.color.push(color);
-    }
-    
-    handlerInput.attributesManager.setSessionAttributes(sessionAttributes);
-    const params = {
-      TableName: 'Colors',
-      Item: {
-        'color': {S: color}
-      }
-    };
 
-    ddb.putItem(params, function(err, data) {
-      if (err) {
-        console.log(err);
-      } else {
-        console.log('Wrote '+ color +' to DynamoDB Colors table');
-      }
-    });
-  
-    return handlerInput.responseBuilder
-      .speak('Wrote '+ color +' to DynamoDB Colors table')
-      .reprompt('')
+      // Save confirm handler in case somebody said 'yes'
+      let sessionAttributes = handlerInput.attributesManager.getSessionAttributes();
+      sessionAttributes.confirmHandler = 'AddMachineHandler';
+      handlerInput.attributesManager.setSessionAttributes(sessionAttributes);
+
+      return handlerInput.responseBuilder
+      .speak(WELCOME_MESSAGE + ' ' + NO_MACHINES_MESSAGE)
+      .reprompt()
       .getResponse();
+    }
   },
 };
 
-const HelpHandler = {
+handlers.AddMachineHandler = {
+  canHandle(handlerInput) {
+    const request = handlerInput.requestEnvelope.request;
+    return request.type === 'AddMachineHandler';
+  },
+  handle(handlerInput) {
+    
+    return handlerInput.responseBuilder
+    .speak(WELCOME_MESSAGE + ' ' + NO_MACHINES_MESSAGE)
+    .reprompt()
+    .getResponse();
+  },
+};
+
+handlers.SessionEndedRequestHandler = {
+  canHandle(handlerInput) {
+    const request = handlerInput.requestEnvelope.request;
+    return request.type === 'SessionEndedRequest';
+  },
+  handle(handlerInput) {
+    console.log(`Session ended with reason: ${handlerInput.requestEnvelope.request.reason}`);
+
+    return handlerInput.responseBuilder.getResponse();
+  },
+};
+
+handlers.YesHandler = {
+  canHandle(handlerInput) {
+    const request = handlerInput.requestEnvelope.request;
+    return request.type === 'IntentRequest'
+      && request.intent.name === 'AMAZON.YesIntent';
+  },
+  handle(handlerInput) {
+    // "consume" confirmHandler
+    let sessionAttributes = handlerInput.attributesManager.getSessionAttributes();
+    let confirmHandler = sessionAttributes.confirmHandler;
+
+    sessionAttributes.confirmHandler = null;
+    handlerInput.attributesManager.setSessionAttributes(sessionAttributes);
+
+    if(confirmHandler) {
+      return handlers[confirmHandler].handle(handlerInput);
+    } else {
+      return handlerInput.responseBuilder
+        .speak(YES_MESSAGE)
+        .reprompt()
+        .getResponse();
+    }
+  },
+};
+
+handlers.HelpHandler = {
   canHandle(handlerInput) {
     const request = handlerInput.requestEnvelope.request;
     return request.type === 'IntentRequest'
@@ -96,7 +107,7 @@ const HelpHandler = {
   },
 };
 
-const ExitHandler = {
+handlers.StopHandler = {
   canHandle(handlerInput) {
     const request = handlerInput.requestEnvelope.request;
     return request.type === 'IntentRequest'
@@ -105,24 +116,12 @@ const ExitHandler = {
   },
   handle(handlerInput) {
     return handlerInput.responseBuilder
-      .speak('Your colors are '+ handlerInput.attributesManager.getSessionAttributes().color.toString() + STOP_MESSAGE)
+      .speak(STOP_MESSAGE)
       .getResponse();
   },
 };
 
-const SessionEndedRequestHandler = {
-  canHandle(handlerInput) {
-    const request = handlerInput.requestEnvelope.request;
-    return request.type === 'SessionEndedRequest';
-  },
-  handle(handlerInput) {
-    console.log(`Session ended with reason: ${handlerInput.requestEnvelope.request.reason}`);
-
-    return handlerInput.responseBuilder.getResponse();
-  },
-};
-
-const ErrorHandler = {
+handlers.ErrorHandler = {
   canHandle() {
     return true;
   },
@@ -136,30 +135,21 @@ const ErrorHandler = {
   },
 };
 
-const SKILL_NAME = 'Glados Quotes';
-const GET_FACT_MESSAGE = '<audio src="https://s3-eu-west-1.amazonaws.com/glados-quotes/welcome.mp3"/>' ;
-const HELP_MESSAGE = '<audio src="https://s3-eu-west-1.amazonaws.com/glados-quotes/help.mp3"/>';
-const HELP_REPROMPT = '<audio src="https://s3-eu-west-1.amazonaws.com/glados-quotes/help.mp3"/>';
-const STOP_MESSAGE = '<audio src="https://s3-eu-west-1.amazonaws.com/glados-quotes/goodby.mp3"/>';
-
-const data = [
-  '<audio src="https://s3-eu-west-1.amazonaws.com/glados-quotes/inslut1.mp3"/>',
-  '<audio src="https://s3-eu-west-1.amazonaws.com/glados-quotes/insult2.mp3"/>',
-  '<audio src="https://s3-eu-west-1.amazonaws.com/glados-quotes/insult3.mp3"/>',
-
-
-];
-
 const skillBuilder = Alexa.SkillBuilders.standard();
 
-exports.handler = skillBuilder
-  .addRequestHandlers(
-    LaunchHandler,
-    GetNewFactHandler,
-    SaveItemHandler,
-    HelpHandler,
-    ExitHandler,
-    SessionEndedRequestHandler
-  )
-  .addErrorHandlers(ErrorHandler)
-  .lambda();
+exports.handler = (...arguments) => {
+  console.log(JSON.stringify(arguments[0])); // print incoming event
+  //console.log(...Object.values(handlers)); // print all handlers
+
+  (skillBuilder
+    .addRequestHandlers(
+      ...Object.values(handlers)
+      //LaunchHandler,
+      //YesHandler,
+      //HelpHandler,
+      //StopHandler,
+      //SessionEndedRequestHandler
+    )
+    .addErrorHandlers(handlers.ErrorHandler)
+    .lambda())(...arguments);
+};

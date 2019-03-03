@@ -14,7 +14,7 @@ exports.handler = async (event, context) => {
   console.log(111111111111111);
 
   try {
-    connectionData = await db.connection.getAll();
+    connectionData = await db.connections.getAll();
     console.log(connectionData)
   } catch (e) {
     console.log(e)
@@ -30,8 +30,8 @@ exports.handler = async (event, context) => {
 
   const postData = JSON.parse(event.body).data;
   
-  const postCalls = connectionData.Items.map(async ({ recordId }) => {
-    let connectionId = recordId;
+  const postCalls = connectionData.Items.map(async ({ ConnectionId }) => {
+    let connectionId = ConnectionId;
     console.log(connectionId);
     try {
       console.log({ ConnectionId: connectionId, Data: postData });
@@ -39,7 +39,7 @@ exports.handler = async (event, context) => {
     } catch (e) {
       if (e.statusCode === 410) {
         console.log(`Found stale connection, deleting ${connectionId}`);
-        await db.connection.del(connectionId);
+        await db.connections.del(connectionId);
       } else {
         throw e;
       }
