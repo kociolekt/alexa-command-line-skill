@@ -10,8 +10,12 @@ const NO_MACHINES_MESSAGE = 'You have no machines assigned. Would you like to as
 const HELP_MESSAGE = 'In command line I can run defined command on connected machines. I can give you the list of avaiable commands or connected machines.';
 const HELP_REPROMPT = 'Would you like me to repeat?';
 const STOP_MESSAGE = 'Exited command line.';
+const FALLBACK_MESSAGE = 'You can continue using command line for example ask me to list commands. What can I help you with?';
+const FALLBACK_REPROMPT = 'What can I help you with?';
 const YES_MESSAGE = 'Nothing to confirm.';
 const PAIR_MESSAGE = 'Pair your machine with following token: ';
+const PAIR_REPROMPT1 = 'Use ';
+const PAIR_REPROMPT2 = ' as pairing token.';
 
 const handlers = {};
 
@@ -43,10 +47,24 @@ handlers.LaunchHandler = {
   },
 };
 
+handlers.SessionEndedHandler = {
+  canHandle(handlerInput) {
+    const request = handlerInput.requestEnvelope.request;
+    return request.type === 'SessionEndedRequest';
+  },
+  async handle(handlerInput) {
+    return handlerInput.responseBuilder
+      .speak(FALLBACK_MESSAGE)
+      .reprompt(FALLBACK_REPROMPT)
+      .getResponse();
+  },
+};
+
 handlers.AddMachineHandler = {
   canHandle(handlerInput) {
     const request = handlerInput.requestEnvelope.request;
-    return request.type === 'AddMachine';
+    return request.type === 'IntentRequest'
+      && request.intent.name === 'AddMachine';
   },
   async handle(handlerInput) {
     let userId = handlerInput.requestEnvelope.session.user.userId;
@@ -58,26 +76,14 @@ handlers.AddMachineHandler = {
     if(notPaired.length) {
       token = notPaired[0].Token;
     } else {
-      token = Math.round(Math.random() * 99999);
+      token = (Math.round(Math.random() * 99999) + '').split('').join(' ');
       await db.machines.addWithToken(userId, token);
     }
 
     return handlerInput.responseBuilder
       .speak(PAIR_MESSAGE + token)
-      .reprompt()
+      .reprompt(PAIR_REPROMPT1 + token + PAIR_REPROMPT2)
       .getResponse();
-  },
-};
-
-handlers.SessionEndedRequestHandler = {
-  canHandle(handlerInput) {
-    const request = handlerInput.requestEnvelope.request;
-    return request.type === 'SessionEndedRequest';
-  },
-  handle(handlerInput) {
-    console.log(`Session ended with reason: ${handlerInput.requestEnvelope.request.reason}`);
-
-    return handlerInput.responseBuilder.getResponse();
   },
 };
 
@@ -134,7 +140,21 @@ handlers.StopHandler = {
   },
 };
 
-handlers.ErrorHandler = {
+handlers.FallbackHandler = {
+  canHandle(handlerInput) {
+    const request = handlerInput.requestEnvelope.request;
+    return request.type === 'IntentRequest'
+      && (request.intent.name === 'AMAZON.FallbackIntent');
+  },
+  handle(handlerInput) {
+    return handlerInput.responseBuilder
+      .speak(FALLBACK_MESSAGE)
+      .reprompt(FALLBACK_REPROMPT)
+      .getResponse();
+  },
+};
+
+const ErrorHandler = {
   canHandle() {
     return true;
   },
@@ -143,8 +163,8 @@ handlers.ErrorHandler = {
     console.log(error);
 
     return handlerInput.responseBuilder
-      .speak('Sorry, an error occurred.')
-      .reprompt('Sorry, an error occurred.')
+      .speak('Sorry, an error occurred in command line.')
+      .reprompt('An error occurred in command line.')
       .getResponse();
   },
 };
@@ -164,6 +184,6 @@ exports.handler = (...arguments) => {
       //StopHandler,
       //SessionEndedRequestHandler
     )
-    .addErrorHandlers(handlers.ErrorHandler)
+    .addErrorHandlers(ErrorHandler)
     .lambda())(...arguments);
 };

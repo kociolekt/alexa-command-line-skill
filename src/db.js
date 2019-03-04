@@ -8,7 +8,7 @@ const connections = {
         if(typeof connectionId !== 'string') {
             throw new Error(`connectionId (${connectionId}) must be a string`);
         }
-        
+
         if(connectionId.length === 0) {
             throw new Error(`connectionId (${connectionId}) is too short`);
         }
@@ -20,7 +20,7 @@ const connections = {
                 ConnectionId: connectionId
             }
         };
-        
+
         DDB.put(params).promise();
     },
 
@@ -40,7 +40,7 @@ const connections = {
         if(typeof connectionId !== 'string') {
             throw new Error(`connectionId (${connectionId}) must be a string`);
         }
-        
+
         if(connectionId.length === 0) {
             throw new Error(`connectionId (${connectionId}) is too short`);
         }
@@ -59,14 +59,18 @@ const connections = {
 
 const machines = {
     addWithToken: (userId, token) => {
-        if(typeof token !== 'number') {
-            throw new Error(`token (${token}) must be a number`);
+        if(typeof token !== 'string') {
+            throw new Error(`token (${token}) must be a string`);
+        }
+
+        if(token.length === 0) {
+            throw new Error(`token (${token}) is too short`);
         }
 
         if(typeof userId !== 'string') {
             throw new Error(`userId (${userId}) must be a string`);
         }
-        
+
         if(userId.length === 0) {
             throw new Error(`userId (${userId}) is too short`);
         }
@@ -80,7 +84,7 @@ const machines = {
                 Token: token
             }
         };
-        
+
         DDB.put(params).promise();
     },
     getAll: () => {
@@ -116,6 +120,20 @@ const machines = {
             },
             KeyConditionExpression: 'RecordType = :recordType',
             FilterExpression: 'UserId = :userId and MachineId = :machineId',
+            TableName: TABLE_NAME
+        };
+
+        return DDB.query(params).promise();
+    },
+    getAllByTokenNotPaired: (token) => {
+        let params = {
+            ExpressionAttributeValues: {
+                ':recordType': 'MACHINES',
+                ':machineId': 'empty',
+                ':token': token
+            },
+            KeyConditionExpression: 'RecordType = :recordType',
+            FilterExpression: 'MachineId = :machineId and Token = :token',
             TableName: TABLE_NAME
         };
 

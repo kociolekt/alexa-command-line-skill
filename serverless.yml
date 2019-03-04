@@ -72,7 +72,7 @@ functions:
   #defaultMessages:
   #  handler: src/handler.defaultMessage
   #  events:
-  #    - websocket: 
+  #    - websocket:
   #        route: $default
   #        routeKey: $default
 
@@ -111,6 +111,8 @@ custom:
                     samples: []
                   - name: AMAZON.YesIntent
                     samples: []
+                  - name: AMAZON.FallbackIntent
+                    samples: []
                   - name: List
                     samples:
                     - list
@@ -127,19 +129,19 @@ custom:
                     - assign
 
 resources:
-  Resources: 
-    ApplicationDynamoDBTable: 
+  Resources:
+    ApplicationDynamoDBTable:
       Type: "AWS::DynamoDB::Table"
-      Properties: 
+      Properties:
         TableName: ${env:TABLE_NAME}
-        AttributeDefinitions: 
+        AttributeDefinitions:
           - AttributeName: RecordType
             AttributeType: S
-        KeySchema: 
+        KeySchema:
           - AttributeName: RecordType
             KeyType: HASH
-        ProvisionedThroughput: 
+        ProvisionedThroughput:
           ReadCapacityUnits: 5
           WriteCapacityUnits: 5
-        SSESpecification: 
+        SSESpecification:
           SSEEnabled: true
