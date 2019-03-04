@@ -118,7 +118,13 @@ custom:
                     - list commands
                     - list avaiable commands
                     - avaiable commands
-                    
+                  - name: AddMachine
+                    samples:
+                    - add machine
+                    - pair machine
+                    - pair
+                    - connect
+                    - assign
 
 resources:
   Resources: 

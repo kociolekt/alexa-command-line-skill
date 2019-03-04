@@ -11,6 +11,7 @@ const HELP_MESSAGE = 'In command line I can run defined command on connected mac
 const HELP_REPROMPT = 'Would you like me to repeat?';
 const STOP_MESSAGE = 'Exited command line.';
 const YES_MESSAGE = 'Nothing to confirm.';
+const PAIR_MESSAGE = 'Pair your machine with following token: ';
 
 const handlers = {};
 
@@ -45,14 +46,26 @@ handlers.LaunchHandler = {
 handlers.AddMachineHandler = {
   canHandle(handlerInput) {
     const request = handlerInput.requestEnvelope.request;
-    return request.type === 'AddMachineHandler';
+    return request.type === 'AddMachine';
   },
-  handle(handlerInput) {
-    
+  async handle(handlerInput) {
+    let userId = handlerInput.requestEnvelope.session.user.userId;
+    let notPaired = (await db.machines.getAllByUserNotPaired(userId)).Items;
+    let token = null;
+
+    console.log(notPaired);
+
+    if(notPaired.length) {
+      token = notPaired[0].Token;
+    } else {
+      token = Math.round(Math.random() * 99999);
+      await db.machines.addWithToken(userId, token);
+    }
+
     return handlerInput.responseBuilder
-    .speak(WELCOME_MESSAGE + ' ' + NO_MACHINES_MESSAGE)
-    .reprompt()
-    .getResponse();
+      .speak(PAIR_MESSAGE + token)
+      .reprompt()
+      .getResponse();
   },
 };
 
@@ -126,7 +139,8 @@ handlers.ErrorHandler = {
     return true;
   },
   handle(handlerInput, error) {
-    console.log(`Error handled: ${error.message}`);
+    console.log(handlerInput);
+    console.log(error);
 
     return handlerInput.responseBuilder
       .speak('Sorry, an error occurred.')

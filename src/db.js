@@ -58,21 +58,25 @@ const connections = {
 };
 
 const machines = {
-    addToken: (token) => {
-        if(typeof token !== 'string') {
-            throw new Error(`token (${token}) must be a string`);
+    addWithToken: (userId, token) => {
+        if(typeof token !== 'number') {
+            throw new Error(`token (${token}) must be a number`);
+        }
+
+        if(typeof userId !== 'string') {
+            throw new Error(`userId (${userId}) must be a string`);
         }
         
-        if(token.length === 0) {
-            throw new Error(`token (${token}) is too short`);
+        if(userId.length === 0) {
+            throw new Error(`userId (${userId}) is too short`);
         }
 
         let params = {
             TableName: TABLE_NAME,
             Item: {
                 RecordType: 'MACHINES',
-                MachineId: null,
-                UserId: null,
+                MachineId: 'empty',
+                UserId: userId,
                 Token: token
             }
         };
@@ -98,6 +102,20 @@ const machines = {
             },
             KeyConditionExpression: 'RecordType = :recordType',
             FilterExpression: 'UserId = :userId',
+            TableName: TABLE_NAME
+        };
+
+        return DDB.query(params).promise();
+    },
+    getAllByUserNotPaired: (userId) => {
+        let params = {
+            ExpressionAttributeValues: {
+                ':recordType': 'MACHINES',
+                ':userId': userId,
+                ':machineId': 'empty'
+            },
+            KeyConditionExpression: 'RecordType = :recordType',
+            FilterExpression: 'UserId = :userId and MachineId = :machineId',
             TableName: TABLE_NAME
         };
 
