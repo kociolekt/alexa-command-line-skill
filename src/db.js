@@ -95,7 +95,7 @@ const machines = {
             ExpressionAttributeNames: {
                 '#machineName': 'MachineName',
                 '#machineId': 'MachineId',
-                '#pairToken': 'PairToken' 
+                '#pairToken': 'PairToken'
                 },
             ExpressionAttributeValues: {
               ':machineName': machineName,

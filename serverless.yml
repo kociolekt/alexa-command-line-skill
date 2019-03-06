@@ -117,7 +117,7 @@ custom:
                     samples: []
                   - name: AMAZON.FallbackIntent
                     samples: []
-                  - name: List
+                  - name: CommandsList
                     samples:
                     - list
                     - commands
@@ -134,6 +134,12 @@ custom:
                     - assign machine
                     - connect
                     - connect machine
+                  - name: MachinesList
+                    samples:
+                    - list machines
+                    - machines
+                    - list avaiable machines
+                    - avaiable machines
 
 resources:
   Resources:
