@@ -1,0 +1,36 @@
+{
+    "requestContext": {
+        "routeKey": "pair",
+        "authorizer": "",
+        "messageId": "WF65eekZIAMCKqw=",
+        "integrationLatency": "",
+        "eventType": "MESSAGE",
+        "error": "",
+        "extendedRequestId": "WF65eGmxoAMF8jA=",
+        "requestTime": "05/Mar/2019:23:51:11 +0000",
+        "messageDirection": "IN",
+        "stage": "dev",
+        "connectedAt": 1551829871567,
+        "requestTimeEpoch": 1551829871835,
+        "identity": {
+            "cognitoIdentityPoolId": null,
+            "accountId": null,
+            "cognitoIdentityId": null,
+            "caller": null,
+            "sourceIp": "89.66.121.17",
+            "accessKey": null,
+            "cognitoAuthenticationType": null,
+            "cognitoAuthenticationProvider": null,
+            "userArn": null,
+            "userAgent": null,
+            "user": null
+        },
+        "requestId": "WF65eGmxoAMF8jA=",
+        "domainName": "wz0edt5qm7.execute-api.us-east-1.amazonaws.com",
+        "connectionId": "WF65bekYIAMCKqw=",
+        "apiId": "wz0edt5qm7",
+        "status": ""
+    },
+    "body": "{\"action\":\"pair\",\"data\":{\"name\":\"wanting swing\",\"uuid\":\"efa0f29e-d1a7-4334-a375-c2e20cd03505\",\"token\":\"66305\"}}",
+    "isBase64Encoded": false
+}

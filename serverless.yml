@@ -59,6 +59,10 @@ functions:
     events:
       - websocket: $disconnect
 
+  onPair:
+    handler: src/onPair.handler
+    events:
+      - websocket: pair
   # hsendMessage - echo function for testing
 # {"action": "sendMessage", "data": "test"}
   sendMessage:
@@ -122,11 +126,14 @@ custom:
                     - avaiable commands
                   - name: AddMachine
                     samples:
+                    - add
                     - add machine
-                    - pair machine
                     - pair
-                    - connect
+                    - pair machine
                     - assign
+                    - assign machine
+                    - connect
+                    - connect machine
 
 resources:
   Resources:

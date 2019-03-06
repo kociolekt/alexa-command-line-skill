@@ -12,7 +12,6 @@ exports.handler = async (event, context, callback) => {
       body: result
     });
   } catch(e) {
-    console.log(e);
     callback(null, {
       statusCode: 500,
       body: e

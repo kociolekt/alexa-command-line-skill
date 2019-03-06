@@ -4,17 +4,14 @@
 const db = require('./db');
 
 exports.handler = async (event, context, callback) => {
-  console.log('onConnect');
-  console.log(event.requestContext.connectionId);
   try {
     let result = await db.connections.add(event.requestContext.connectionId);
-    console.log(result);
+    
     callback(null, {
       statusCode: 200,
       body: result
     });
   } catch(e) {
-    console.log(e);
     callback(null, {
       statusCode: 500,
       body: e

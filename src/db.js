@@ -79,13 +79,34 @@ const machines = {
             TableName: TABLE_NAME,
             Item: {
                 RecordType: 'MACHINES',
+                MachineName: 'empty',
                 MachineId: 'empty',
                 UserId: userId,
-                Token: token
+                PairToken: token
             }
         };
 
         DDB.put(params).promise();
+    },
+    updateMachine: (machineName, machineId, token) => {
+        var params = {
+            TableName: TABLE_NAME,
+            Key: { RecordType: 'MACHINES' },
+            ExpressionAttributeNames: {
+                '#machineName': 'MachineName',
+                '#machineId': 'MachineId',
+                '#pairToken': 'PairToken' 
+                },
+            ExpressionAttributeValues: {
+              ':machineName': machineName,
+              ':machineId': machineId,
+              ':pairToken': token,
+            },
+            ConditionExpression: '#pairToken = :pairToken',
+            UpdateExpression: 'set #machineName = :machineName, #machineId = :machineId'
+          };
+
+        return DDB.update(params).promise();
     },
     getAll: () => {
         let params = {
@@ -130,10 +151,10 @@ const machines = {
             ExpressionAttributeValues: {
                 ':recordType': 'MACHINES',
                 ':machineId': 'empty',
-                ':token': token
+                ':pairToken': token
             },
             KeyConditionExpression: 'RecordType = :recordType',
-            FilterExpression: 'MachineId = :machineId and Token = :token',
+            FilterExpression: 'MachineId = :machineId and PairToken = :pairToken',
             TableName: TABLE_NAME
         };
 

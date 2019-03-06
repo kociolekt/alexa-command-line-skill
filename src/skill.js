@@ -19,6 +19,9 @@ const PAIR_REPROMPT2 = ' as pairing token.';
 
 const handlers = {};
 
+/*
+  MAIN REQUESTS
+*/
 handlers.LaunchHandler = {
   canHandle(handlerInput) {
     const request = handlerInput.requestEnvelope.request;
@@ -60,6 +63,27 @@ handlers.SessionEndedHandler = {
   },
 };
 
+/*
+  MACHINE HANDLERS
+*/
+async function generateUniqueToken(iteration = 1) {
+  if(iteration > 10) {
+    throw new Error('Too many token genration attempts. Tokens depleted?');
+  }
+
+  // Generate new token
+  let token = (Math.round(Math.random() * 99999) + '').split('').join(' ');
+  let sameTokens = (await db.machines.getAllByTokenNotPaired(token)).Items;
+
+  console.log(`Token: ${token} Iteration: ${iteration}`);
+
+  if(sameTokens.length) {
+    return await generateUniqueToken(iteration + 1);
+  } else {
+    return token;
+  }
+}
+
 handlers.AddMachineHandler = {
   canHandle(handlerInput) {
     const request = handlerInput.requestEnvelope.request;
@@ -76,7 +100,7 @@ handlers.AddMachineHandler = {
     if(notPaired.length) {
       token = notPaired[0].Token;
     } else {
-      token = (Math.round(Math.random() * 99999) + '').split('').join(' ');
+      token = await generateUniqueToken();
       await db.machines.addWithToken(userId, token);
     }
 
@@ -87,6 +111,9 @@ handlers.AddMachineHandler = {
   },
 };
 
+/*
+  DEFAULT INTENTS
+*/
 handlers.YesHandler = {
   canHandle(handlerInput) {
     const request = handlerInput.requestEnvelope.request;
@@ -154,6 +181,9 @@ handlers.FallbackHandler = {
   },
 };
 
+/*
+  ERROR HANDLER
+*/
 const ErrorHandler = {
   canHandle() {
     return true;
