@@ -16,6 +16,10 @@ const YES_MESSAGE = 'Nothing to confirm.';
 const PAIR_MESSAGE = 'Pair your machine with following token: ';
 const PAIR_REPROMPT1 = 'Use ';
 const PAIR_REPROMPT2 = ' as pairing token.';
+const COMMANDS_MESSAGE1 = 'You have ';
+const COMMANDS_MESSAGE2 = ' commands on ';
+const COMMANDS_MESSAGE3 = ' connected machines avaiable: ';
+
 
 const handlers = {};
 
@@ -59,6 +63,31 @@ handlers.SessionEndedHandler = {
     return handlerInput.responseBuilder
       .speak(FALLBACK_MESSAGE)
       .reprompt(FALLBACK_REPROMPT)
+      .getResponse();
+  },
+};
+
+/*
+  COMMANDS HANDLERS
+*/
+
+handlers.CommandsListHandler = {
+  canHandle(handlerInput) {
+    const request = handlerInput.requestEnvelope.request;
+    return request.type === 'IntentRequest'
+      && request.intent.name === 'List';
+  },
+  async handle(handlerInput) {
+    let userId = handlerInput.requestEnvelope.session.user.userId;
+    let pairedMachines = (await db.machines.getAllByUser(userId)).Items;
+    let commandsNumber = 0;
+    let machinesNumeber = pairedMachines.length
+
+    console.log(pairedMachines);
+
+    return handlerInput.responseBuilder
+      .speak(COMMANDS_MESSAGE1 + commandsNumber + COMMANDS_MESSAGE2 + machinesNumeber + COMMANDS_MESSAGE3)
+      .reprompt()
       .getResponse();
   },
 };
