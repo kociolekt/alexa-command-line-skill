@@ -117,8 +117,9 @@ const machines = {
               ':machineName': machineName,
               ':machineId': machineId,
               ':pairToken': token,
+              ':emptyValue': 'empty',
             },
-            ConditionExpression: '#pairToken = :pairToken, #machineName = empty, #machineId = empty',
+            ConditionExpression: '#pairToken = :pairToken and #machineName = :emptyValue and #machineId = :emptyValue',
             UpdateExpression: 'set #machineName = :machineName, #machineId = :machineId'
           };
 

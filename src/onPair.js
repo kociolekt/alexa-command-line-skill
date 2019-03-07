@@ -3,17 +3,21 @@ const send = require('./send');
 const db = require('./db');
 
 exports.handler = action(async (api, connectionId, data) => {
-  let token = (data.token + '').split('').join(' ');
+  let token = (data.token + '');
 
   try {
-    if(token.length != 9) {
-      throw new Error(`Bad token (${data.token})`);
+    if(token.length != 5) {
+      throw new Error(`Bad token (${token})`);
     }
-    
+
     let machines = (await db.machines.getAllByTokenNotPaired(token)).Items;
 
     if(machines.length > 1) {
-      throw new Error(`Too many machines for token (${data.token})`);
+      throw new Error(`Too many machines for token (${token})`);
+    }
+
+    if(machines.length === 0) {
+      throw new Error(`No redords found for provided token (${token})`);
     }
 
     let recordId = machines[0].RecordId;

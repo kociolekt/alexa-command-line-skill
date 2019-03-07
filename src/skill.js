@@ -101,7 +101,7 @@ async function generateUniqueToken(iteration = 1) {
   }
 
   // Generate new token
-  let token = (Math.round(Math.random() * 99999) + '').split('').join(' ');
+  let token = (Math.round((Math.random() * 89999) + 10000) + '');
   let sameTokens = (await db.machines.getAllByTokenNotPaired(token)).Items;
 
   console.log(`Token: ${token} Iteration: ${iteration}`);
@@ -133,9 +133,11 @@ handlers.AddMachineHandler = {
       await db.machines.createMachineToken(userId, token);
     }
 
+    let speakToken = token.split('').join(' ');
+
     return handlerInput.responseBuilder
-      .speak(PAIR_MESSAGE + token)
-      .reprompt(PAIR_REPROMPT1 + token + PAIR_REPROMPT2)
+      .speak(PAIR_MESSAGE + speakToken)
+      .reprompt(PAIR_REPROMPT1 + speakToken + PAIR_REPROMPT2)
       .getResponse();
   },
 };
