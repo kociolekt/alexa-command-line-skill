@@ -25,14 +25,33 @@ provider:
         - "dynamodb:Query"
         - "dynamodb:Scan"
       Resource:
-        - Fn::GetAtt: [ApplicationDynamoDBTable, Arn]
+        - Fn::GetAtt: [ConnectionsDynamoDBTable, Arn]
         - Fn::Join:
             - '/'
-            - - Fn::GetAtt: [ApplicationDynamoDBTable, Arn]
+            - - Fn::GetAtt: [ConnectionsDynamoDBTable, Arn]
               - '*'
+    - Effect: Allow
+      Action:
+        - "dynamodb:PutItem"
+        - "dynamodb:GetItem"
+        - "dynamodb:UpdateItem"
+        - "dynamodb:DeleteItem"
+        - "dynamodb:BatchGetItem"
+        - "dynamodb:BatchWriteItem"
+        - "dynamodb:Query"
+        - "dynamodb:Scan"
+      Resource:
+        - Fn::GetAtt: [MachinesDynamoDBTable, Arn]
+        - Fn::Join:
+            - '/'
+            - - Fn::GetAtt: [MachinesDynamoDBTable, Arn]
+              - '*'
+
   environment:
-    TABLE_NAME:
-      Ref: ApplicationDynamoDBTable
+    CONNECTIONS_TABLE_NAME:
+      Ref: ConnectionsDynamoDBTable
+    MACHINES_TABLE_NAME:
+      Ref: MachinesDynamoDBTable
 
   # optional
   websocketApiName: ${self:service}-${self:provider.stage}
@@ -58,6 +77,11 @@ functions:
     handler: src/onDisconnect.handler
     events:
       - websocket: $disconnect
+
+  onIntroduce:
+    handler: src/onIntroduce.handler
+    events:
+      - websocket: introduce
 
   onPair:
     handler: src/onPair.handler
@@ -143,18 +167,60 @@ custom:
 
 resources:
   Resources:
-    ApplicationDynamoDBTable:
+    ConnectionsDynamoDBTable:
       Type: "AWS::DynamoDB::Table"
       Properties:
-        TableName: ${env:TABLE_NAME}
+        TableName: ${env:CONNECTIONS_TABLE_NAME}
         AttributeDefinitions:
-          - AttributeName: RecordType
+          - AttributeName: ConnectionId
             AttributeType: S
         KeySchema:
-          - AttributeName: RecordType
+          - AttributeName: ConnectionId
             KeyType: HASH
         ProvisionedThroughput:
           ReadCapacityUnits: 5
           WriteCapacityUnits: 5
         SSESpecification:
           SSEEnabled: true
+    MachinesDynamoDBTable:
+      Type: "AWS::DynamoDB::Table"
+      Properties:
+        TableName: ${env:MACHINES_TABLE_NAME}
+        AttributeDefinitions:
+          - AttributeName: RecordId
+            AttributeType: S
+          - AttributeName: MachineId
+            AttributeType: S
+          - AttributeName: UserId
+            AttributeType: S
+        KeySchema:
+          - AttributeName: RecordId
+            KeyType: HASH
+        ProvisionedThroughput:
+          ReadCapacityUnits: 5
+          WriteCapacityUnits: 5
+        SSESpecification:
+          SSEEnabled: true
+        GlobalSecondaryIndexes:
+          - 
+            IndexName: "Machine"
+            KeySchema: 
+              - 
+                AttributeName: "MachineId"
+                KeyType: "HASH"
+            Projection:
+              ProjectionType: "ALL"
+            ProvisionedThroughput: 
+              ReadCapacityUnits: "5"
+              WriteCapacityUnits: "5"
+          - 
+            IndexName: "User"
+            KeySchema: 
+              - 
+                AttributeName: "UserId"
+                KeyType: "HASH"
+            Projection:
+              ProjectionType: "ALL"
+            ProvisionedThroughput: 
+              ReadCapacityUnits: "5"
+              WriteCapacityUnits: "5"

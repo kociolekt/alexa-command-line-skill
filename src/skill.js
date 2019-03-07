@@ -130,7 +130,7 @@ handlers.AddMachineHandler = {
       token = notPaired[0].Token;
     } else {
       token = await generateUniqueToken();
-      await db.machines.addWithToken(userId, token);
+      await db.machines.createMachineToken(userId, token);
     }
 
     return handlerInput.responseBuilder

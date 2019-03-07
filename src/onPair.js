@@ -9,7 +9,18 @@ exports.handler = action(async (api, connectionId, data) => {
     if(token.length != 9) {
       throw new Error(`Bad token (${data.token})`);
     }
-    await db.machines.updateMachine(data.name, data.uuid, token);
+    
+    let machines = (await db.machines.getAllByTokenNotPaired(token)).Items;
+
+    if(machines.length > 1) {
+      throw new Error(`Too many machines for token (${data.token})`);
+    }
+
+    let recordId = machines[0].RecordId;
+
+    console.log(recordId);
+
+    await db.machines.updateMachineNameAndId(recordId, data.name, data.uuid, token);
     await send(api, connectionId, { action: 'pair', data: 'Machine paired successfully!' });
   } catch (e) {
     try {

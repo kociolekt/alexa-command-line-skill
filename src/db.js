@@ -1,7 +1,11 @@
 const AWS = require('aws-sdk');
 AWS.config.update({ region: process.env.AWS_REGION });
+
+const uuid = require('uuid/v4');
+
 const DDB = new AWS.DynamoDB.DocumentClient({apiVersion: '2012-08-10'});
-const TABLE_NAME = process.env.TABLE_NAME || 'LocalTableName';
+const CONNECTIONS_TABLE_NAME = process.env.CONNECTIONS_TABLE_NAME || 'LocalTableName';
+const MACHINES_TABLE_NAME = process.env.MACHINES_TABLE_NAME || 'LocalTableName';
 
 const connections = {
     add: (connectionId) => {
@@ -14,9 +18,8 @@ const connections = {
         }
 
         let params = {
-            TableName: TABLE_NAME,
+            TableName: CONNECTIONS_TABLE_NAME,
             Item: {
-                RecordType: 'CONNECTION',
                 ConnectionId: connectionId
             }
         };
@@ -26,14 +29,28 @@ const connections = {
 
     getAll: () => {
         let params = {
-            ExpressionAttributeValues: {
-                ':recordType': 'CONNECTION',
-            },
-            KeyConditionExpression: 'RecordType = :recordType',
-            TableName: TABLE_NAME
+            TableName: CONNECTIONS_TABLE_NAME
         };
 
-        return DDB.query(params).promise();
+        return DDB.scan(params).promise();
+    },
+
+    update: (connectionId, machineName, machineId) => {
+        var params = {
+            TableName: CONNECTIONS_TABLE_NAME,
+            Key: { ConnectionId: connectionId },
+            ExpressionAttributeNames: {
+                '#machineName': 'MachineName',
+                '#machineId': 'MachineId'
+            },
+            ExpressionAttributeValues: {
+              ':machineName': machineName,
+              ':machineId': machineId
+            },
+            UpdateExpression: 'set #machineName = :machineName, #machineId = :machineId'
+          };
+
+        return DDB.update(params).promise();
     },
 
     del: (connectionId) => {
@@ -46,11 +63,8 @@ const connections = {
         }
 
         let params = {
-            TableName: TABLE_NAME,
-            Item: {
-                RecordType: 'CONNECTION',
-                ConnectionId: connectionId
-            }
+            TableName: CONNECTIONS_TABLE_NAME,
+            Key: { ConnectionId: connectionId }
         };
 
         DDB.delete(params).promise();
@@ -58,7 +72,7 @@ const connections = {
 };
 
 const machines = {
-    addWithToken: (userId, token) => {
+    createMachineToken: (userId, token) => {
         if(typeof token !== 'string') {
             throw new Error(`token (${token}) must be a string`);
         }
@@ -75,10 +89,12 @@ const machines = {
             throw new Error(`userId (${userId}) is too short`);
         }
 
+        let recordId = uuid();
+
         let params = {
-            TableName: TABLE_NAME,
+            TableName: MACHINES_TABLE_NAME,
             Item: {
-                RecordType: 'MACHINES',
+                RecordId: recordId,
                 MachineName: 'empty',
                 MachineId: 'empty',
                 UserId: userId,
@@ -88,21 +104,21 @@ const machines = {
 
         DDB.put(params).promise();
     },
-    updateMachine: (machineName, machineId, token) => {
+    updateMachineNameAndId: (recordId, machineName, machineId, token) => {
         var params = {
-            TableName: TABLE_NAME,
-            Key: { RecordType: 'MACHINES' },
+            TableName: MACHINES_TABLE_NAME,
+            Key: { RecordId: recordId },
             ExpressionAttributeNames: {
                 '#machineName': 'MachineName',
                 '#machineId': 'MachineId',
                 '#pairToken': 'PairToken'
-                },
+            },
             ExpressionAttributeValues: {
               ':machineName': machineName,
               ':machineId': machineId,
               ':pairToken': token,
             },
-            ConditionExpression: '#pairToken = :pairToken',
+            ConditionExpression: '#pairToken = :pairToken, #machineName = empty, #machineId = empty',
             UpdateExpression: 'set #machineName = :machineName, #machineId = :machineId'
           };
 
@@ -110,52 +126,47 @@ const machines = {
     },
     getAll: () => {
         let params = {
-            ExpressionAttributeValues: {
-                ':recordType': 'MACHINES',
-            },
-            KeyConditionExpression: 'RecordType = :recordType',
-            TableName: TABLE_NAME
+            TableName: MACHINES_TABLE_NAME
         };
 
-        return DDB.query(params).promise();
+        return DDB.scan(params).promise();
     },
     getAllByUser: (userId) => {
         let params = {
+            TableName: MACHINES_TABLE_NAME,
+            IndexName: 'User',
+            KeyConditionExpression: 'UserId = :userId',
             ExpressionAttributeValues: {
-                ':recordType': 'MACHINES',
                 ':userId': userId
             },
-            KeyConditionExpression: 'RecordType = :recordType',
-            FilterExpression: 'UserId = :userId',
-            TableName: TABLE_NAME
         };
 
         return DDB.query(params).promise();
     },
     getAllByUserNotPaired: (userId) => {
         let params = {
+            TableName: MACHINES_TABLE_NAME,
+            IndexName: 'User',
+            KeyConditionExpression: 'UserId = :userId',
             ExpressionAttributeValues: {
-                ':recordType': 'MACHINES',
                 ':userId': userId,
                 ':machineId': 'empty'
             },
-            KeyConditionExpression: 'RecordType = :recordType',
-            FilterExpression: 'UserId = :userId and MachineId = :machineId',
-            TableName: TABLE_NAME
+            FilterExpression: 'MachineId = :machineId',
         };
 
         return DDB.query(params).promise();
     },
     getAllByTokenNotPaired: (token) => {
         let params = {
+            TableName: MACHINES_TABLE_NAME,
+            IndexName: 'Machine',
+            KeyConditionExpression: 'MachineId = :machineId',
             ExpressionAttributeValues: {
-                ':recordType': 'MACHINES',
                 ':machineId': 'empty',
                 ':pairToken': token
             },
-            KeyConditionExpression: 'RecordType = :recordType',
-            FilterExpression: 'MachineId = :machineId and PairToken = :pairToken',
-            TableName: TABLE_NAME
+            FilterExpression: 'PairToken = :pairToken'
         };
 
         return DDB.query(params).promise();
