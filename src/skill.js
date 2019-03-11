@@ -80,13 +80,29 @@ handlers.CommandsListHandler = {
   async handle(handlerInput) {
     let userId = handlerInput.requestEnvelope.session.user.userId;
     let pairedMachines = (await db.machines.getAllByUser(userId)).Items;
-    let commandsNumber = 0;
-    let machinesNumeber = pairedMachines.length
+    let machinesNumeber = pairedMachines.length;
 
-    console.log(pairedMachines);
+    let aliases = [];
+    let aliasesnumber = 0;
+    let aliasesStr = '';
+
+    for(let i = 0, mLen = machinesNumeber; i < mLen; i++) {
+      let currentMachineAliases = pairedMachines[i].Aliases;
+      let currentMachineAliasesNumebr = currentMachineAliases.length;
+      aliasesnumber += currentMachineAliasesNumebr;
+
+      console.log('ALIASES!!!!!!!!!!!!');
+      console.log(currentMachineAliases);
+
+      for(let j = 0, aLen = currentMachineAliasesNumebr; j < aLen; j++) {
+        aliases.push(currentMachineAliases[j]);
+      }
+    }
+
+    aliasesStr = aliases.join(', ');
 
     return handlerInput.responseBuilder
-      .speak(COMMANDS_MESSAGE1 + commandsNumber + COMMANDS_MESSAGE2 + machinesNumeber + COMMANDS_MESSAGE3)
+      .speak(COMMANDS_MESSAGE1 + aliasesnumber + COMMANDS_MESSAGE2 + machinesNumeber + COMMANDS_MESSAGE3 + '. ' + aliasesStr)
       .reprompt()
       .getResponse();
   },

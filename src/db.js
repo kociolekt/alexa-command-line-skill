@@ -35,13 +35,13 @@ const connections = {
         return DDB.scan(params).promise();
     },
 
-    update: (connectionId, machineName, machineId) => {
+    update: (connectionId, machineName, machineId, aliases) => {
         var params = {
             TableName: CONNECTIONS_TABLE_NAME,
             Key: { ConnectionId: connectionId },
             ExpressionAttributeNames: {
                 '#machineName': 'MachineName',
-                '#machineId': 'MachineId'
+                '#machineId': 'MachineId',
             },
             ExpressionAttributeValues: {
               ':machineName': machineName,
@@ -125,6 +125,23 @@ const machines = {
 
         return DDB.update(params).promise();
     },
+    updateMachineAliases: (recordId, connectionId, aliases) => {
+        var params = {
+            TableName: MACHINES_TABLE_NAME,
+            Key: { RecordId: recordId },
+            ExpressionAttributeNames: {
+                '#connectionId': 'ConnectionId',
+                '#aliases': 'Aliases'
+            },
+            ExpressionAttributeValues: {
+              ':connectionId': connectionId,
+              ':aliases': aliases,
+            },
+            UpdateExpression: 'set #connectionId = :connectionId, #aliases = :aliases'
+          };
+
+        return DDB.update(params).promise();
+    },
     getAll: () => {
         let params = {
             TableName: MACHINES_TABLE_NAME
@@ -139,6 +156,18 @@ const machines = {
             KeyConditionExpression: 'UserId = :userId',
             ExpressionAttributeValues: {
                 ':userId': userId
+            },
+        };
+
+        return DDB.query(params).promise();
+    },
+    getAllByMachineId: (machineId) => {
+        let params = {
+            TableName: MACHINES_TABLE_NAME,
+            IndexName: 'Machine',
+            KeyConditionExpression: 'MachineId = :machineId',
+            ExpressionAttributeValues: {
+                ':machineId': machineId
             },
         };
 
