@@ -123,14 +123,14 @@ handlers.RunCommandHandler = {
     if(machinesNumber > 0) {
       let aliasesNumber = 0;
       let aliasesMap = {};
-  
+
       for(let i = 0, mLen = machinesNumber; i < mLen; i++) {
         let currentMachine = pairedMachines[i];
         let currentMachineAliases = currentMachine.Aliases;
         if (currentMachineAliases) {
           let currentMachineAliasesNumber = currentMachineAliases.length;
           aliasesNumber += currentMachineAliasesNumber;
-    
+
           for(let j = 0, aLen = currentMachineAliasesNumber; j < aLen; j++) {
             let currentAlias = currentMachineAliases[j];
 
@@ -142,7 +142,7 @@ handlers.RunCommandHandler = {
           }
         }
       }
-  
+
       if(aliasesNumber === 0) {
         return noCommands(handlerInput);
       }
@@ -203,32 +203,36 @@ handlers.CommandsListHandler = {
       let aliasesNumber = 0;
       let lastAlias = '';
       let aliasesStr = '';
-  
+      let aliasesCardStr = '';
+
       for(let i = 0, mLen = machinesNumeber; i < mLen; i++) {
         let currentMachineAliases = pairedMachines[i].Aliases;
         if (currentMachineAliases) {
           let currentMachineAliasesNumber = currentMachineAliases.length;
           aliasesNumber += currentMachineAliasesNumber;
-    
+
           for(let j = 0, aLen = currentMachineAliasesNumber; j < aLen; j++) {
             aliases.push(currentMachineAliases[j]);
           }
         }
       }
-  
+
+      aliasesCardStr = aliases.join('\n');
+
       if(aliasesNumber > 1) {
         lastAlias = aliases.pop();
         aliasesStr = aliases.join(',<break strength="strong"/>  ') + ' <break strength="weak"/> and ' + lastAlias;
       } else {
         aliasesStr = aliases[0];
       }
-  
+
       if(aliasesNumber === 0) {
-        return noCommands(handlerInput);        
+        return noCommands(handlerInput);
       }
 
       return handlerInput.responseBuilder
         .speak(COMMANDS_MESSAGE1 + aliasesNumber + COMMANDS_MESSAGE2 + machinesNumeber + COMMANDS_MESSAGE3 + ' ' + aliasesStr)
+        .withSimpleCard('Commands', aliasesCardStr)
         .reprompt()
         .getResponse();
     } else {
@@ -283,6 +287,7 @@ handlers.AddMachineHandler = {
     return handlerInput.responseBuilder
       .speak(PAIR_MESSAGE + speakToken)
       .reprompt(PAIR_REPROMPT1 + speakToken + PAIR_REPROMPT2)
+      .withSimpleCard('Pairing', 'Token:' + token)
       .getResponse();
   },
 };
@@ -302,16 +307,20 @@ handlers.MachinesListHandler = {
       let machinesNames = pairedMachines.map(machine => machine.MachineName);
       let lastMachine = '';
       let machinesStr = '';
-  
+      let machinesCardStr = '';
+
+      machinesCardStr = machinesNames.join('\n');
+
       if(machinesNumeber > 1) {
         lastMachine = machinesNames.pop();
         machinesStr = machinesNames.join(',<break strength="strong"/>  ') + ' <break strength="weak"/> and ' + lastMachine;
       } else {
         machinesStr = machinesNames[0];
       }
-  
+
       return handlerInput.responseBuilder
         .speak(MACHINES_MESSAGE1 + machinesNumeber + MACHINES_MESSAGE2 + machinesStr)
+        .withSimpleCard('Machines', machinesCardStr)
         .reprompt()
         .getResponse();
     } else {
