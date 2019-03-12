@@ -3,14 +3,17 @@
 require('dotenv').config();
 
 const Alexa = require('ask-sdk');
+const AWS = require('aws-sdk');
+require('aws-sdk/clients/apigatewaymanagementapi');
 const db = require('./db');
+const run = require('./run');
 
 const WELCOME_MESSAGE = 'Welcome in alexa command line.';
-const NO_MACHINES_MESSAGE = 'You have no machines assigned. Would you like to assign one now?';
-const HELP_MESSAGE = 'In command line I can run defined command on connected machines. I can give you the list of avaiable commands or connected machines.';
+const NO_MACHINES_MESSAGE = 'You have no machines paired. Would you like to pair one now?';
+const HELP_MESSAGE = 'In command line <break strength="weak"/> I can run defined commands on connected machines. I can give you the list of avaiable commands, <break strength="weak"/> connected machines, <break strength="weak"/> or provide you with pairing token. <break strength="strong"/> What can I do for you?';
 const HELP_REPROMPT = 'Would you like me to repeat?';
 const STOP_MESSAGE = 'Exited command line.';
-const FALLBACK_MESSAGE = 'You can continue using command line for example ask me to list commands. What can I help you with?';
+const FALLBACK_MESSAGE = 'You can continue using command line. For example: <break strength="medium"/> ask me to list commands. What can I help you with?';
 const FALLBACK_REPROMPT = 'What can I help you with?';
 const YES_MESSAGE = 'Nothing to confirm.';
 const PAIR_MESSAGE = 'Pair your machine with following token: ';
@@ -19,9 +22,50 @@ const PAIR_REPROMPT2 = ' as pairing token.';
 const COMMANDS_MESSAGE1 = 'You have ';
 const COMMANDS_MESSAGE2 = ' commands on ';
 const COMMANDS_MESSAGE3 = ' connected machines avaiable: ';
-
+const NO_COMMANDS_MESSAGE = 'You have no commands avaiable. Try adding an alias on your machine.';
+const MACHINES_MESSAGE1 = 'You have ';
+const MACHINES_MESSAGE2 = ' paired machines: ';
+const NO_COMMAND_FOUND1 = 'Command ';
+const NO_COMMAND_FOUND2 = ' have been not found on any of your machines. Would you like to hear list of your commands?';
+const TOO_MANY_COMMAND_MACHINES1 = 'There are more than two machines with ';
+const TOO_MANY_COMMAND_MACHINES2 = ' command';
+const RUNNING_COMMAND1 = 'Started ';
+const RUNNING_COMMAND2 = ' on ';
+const RUNNING_COMMAND_ERROR = 'There was an error while sending the command. ';
 
 const handlers = {};
+
+const apigwManagementApi = new AWS.ApiGatewayManagementApi({
+  apiVersion: '2018-11-29',
+  endpoint: 'wz0edt5qm7.execute-api.us-east-1.amazonaws.com' + '/' + 'dev' // TODO: jak na razie sztywniak bo muszę dowiedzieć sie jak to w skillu złożyć
+});
+
+/*
+  HELPERS
+*/
+
+function confirmIntent(handlerInput, intentName) {
+  // Save confirm handler in case somebody said 'yes'
+  let sessionAttributes = handlerInput.attributesManager.getSessionAttributes();
+  sessionAttributes.confirmHandler = intentName;
+  handlerInput.attributesManager.setSessionAttributes(sessionAttributes);
+}
+
+function noCommands(handlerInput) {
+  return handlerInput.responseBuilder
+    .speak(NO_COMMANDS_MESSAGE)
+    .reprompt()
+    .getResponse();
+}
+
+function noMachines(handlerInput, prefix) {
+  confirmIntent(handlerInput, 'AddMachineHandler');
+
+  return handlerInput.responseBuilder
+    .speak(prefix + ' ' + NO_MACHINES_MESSAGE)
+    .reprompt()
+    .getResponse();
+}
 
 /*
   MAIN REQUESTS
@@ -32,7 +76,7 @@ handlers.LaunchHandler = {
     return request.type === 'LaunchRequest';
   },
   async handle(handlerInput) {
-    let machines = (await db.machines.getAllByUser(handlerInput.requestEnvelope.session.user.userId)).Items;
+    let machines = (await db.machines.getAllByUserPaired(handlerInput.requestEnvelope.session.user.userId)).Items;
 
     if(machines.length > 0) {
       return handlerInput.responseBuilder
@@ -40,16 +84,7 @@ handlers.LaunchHandler = {
       .reprompt('')
       .getResponse();
     } else {
-
-      // Save confirm handler in case somebody said 'yes'
-      let sessionAttributes = handlerInput.attributesManager.getSessionAttributes();
-      sessionAttributes.confirmHandler = 'AddMachineHandler';
-      handlerInput.attributesManager.setSessionAttributes(sessionAttributes);
-
-      return handlerInput.responseBuilder
-      .speak(WELCOME_MESSAGE + ' ' + NO_MACHINES_MESSAGE)
-      .reprompt()
-      .getResponse();
+      return noMachines(handlerInput, WELCOME_MESSAGE);
     }
   },
 };
@@ -71,40 +106,134 @@ handlers.SessionEndedHandler = {
   COMMANDS HANDLERS
 */
 
+handlers.RunCommandHandler = {
+  canHandle(handlerInput) {
+    const request = handlerInput.requestEnvelope.request;
+    return request.type === 'IntentRequest'
+      && request.intent.name === 'RunCommand';
+  },
+  async handle(handlerInput) {
+    let userId = handlerInput.requestEnvelope.session.user.userId;
+    let command = handlerInput.requestEnvelope.request.intent.slots.command.value;
+    let pairedMachines = (await db.machines.getAllByUserPaired(userId)).Items;
+    let machinesNumber = pairedMachines.length;
+
+    console.log(`Invoked command: ${command}`);
+
+    if(machinesNumber > 0) {
+      let aliasesNumber = 0;
+      let aliasesMap = {};
+  
+      for(let i = 0, mLen = machinesNumber; i < mLen; i++) {
+        let currentMachine = pairedMachines[i];
+        let currentMachineAliases = currentMachine.Aliases;
+        if (currentMachineAliases) {
+          let currentMachineAliasesNumber = currentMachineAliases.length;
+          aliasesNumber += currentMachineAliasesNumber;
+    
+          for(let j = 0, aLen = currentMachineAliasesNumber; j < aLen; j++) {
+            let currentAlias = currentMachineAliases[j];
+
+            if(!aliasesMap[currentAlias]) {
+              aliasesMap[currentAlias] = [];
+            }
+
+            aliasesMap[currentAlias].push(currentMachine);
+          }
+        }
+      }
+  
+      if(aliasesNumber === 0) {
+        return noCommands(handlerInput);
+      }
+
+      let commandMachines = aliasesMap[command];
+
+      if(!commandMachines || !commandMachines.length) {
+        confirmIntent(handlerInput, 'CommandsListHandler');
+
+        return handlerInput.responseBuilder
+          .speak(NO_COMMAND_FOUND1 + command + NO_COMMAND_FOUND2)
+          .reprompt()
+          .getResponse();
+      }
+
+      if(commandMachines.length > 1) {
+        return handlerInput.responseBuilder
+          .speak(TOO_MANY_COMMAND_MACHINES1 + command + TOO_MANY_COMMAND_MACHINES2)
+          .reprompt()
+          .getResponse();
+      }
+
+      let executionMachine = commandMachines[0];
+
+      try {
+        await run(apigwManagementApi, executionMachine.ConnectionId, command);
+      } catch(e) {
+        console.log(e);
+        return handlerInput.responseBuilder
+          .speak(RUNNING_COMMAND_ERROR + e.message)
+          .reprompt()
+          .getResponse();
+      }
+
+      return handlerInput.responseBuilder
+        .speak(RUNNING_COMMAND1 + command + RUNNING_COMMAND2 + commandMachines[0].MachineName)
+        .reprompt()
+        .getResponse();
+    } else {
+      return noMachines(handlerInput);
+    }
+  },
+};
+
 handlers.CommandsListHandler = {
   canHandle(handlerInput) {
     const request = handlerInput.requestEnvelope.request;
     return request.type === 'IntentRequest'
-      && request.intent.name === 'List';
+      && request.intent.name === 'CommandsList';
   },
   async handle(handlerInput) {
     let userId = handlerInput.requestEnvelope.session.user.userId;
-    let pairedMachines = (await db.machines.getAllByUser(userId)).Items;
+    let pairedMachines = (await db.machines.getAllByUserPaired(userId)).Items;
     let machinesNumeber = pairedMachines.length;
 
-    let aliases = [];
-    let aliasesnumber = 0;
-    let aliasesStr = '';
-
-    for(let i = 0, mLen = machinesNumeber; i < mLen; i++) {
-      let currentMachineAliases = pairedMachines[i].Aliases;
-      let currentMachineAliasesNumebr = currentMachineAliases.length;
-      aliasesnumber += currentMachineAliasesNumebr;
-
-      console.log('ALIASES!!!!!!!!!!!!');
-      console.log(currentMachineAliases);
-
-      for(let j = 0, aLen = currentMachineAliasesNumebr; j < aLen; j++) {
-        aliases.push(currentMachineAliases[j]);
+    if(machinesNumeber > 0) {
+      let aliases = [];
+      let aliasesNumber = 0;
+      let lastAlias = '';
+      let aliasesStr = '';
+  
+      for(let i = 0, mLen = machinesNumeber; i < mLen; i++) {
+        let currentMachineAliases = pairedMachines[i].Aliases;
+        if (currentMachineAliases) {
+          let currentMachineAliasesNumber = currentMachineAliases.length;
+          aliasesNumber += currentMachineAliasesNumber;
+    
+          for(let j = 0, aLen = currentMachineAliasesNumber; j < aLen; j++) {
+            aliases.push(currentMachineAliases[j]);
+          }
+        }
       }
+  
+      if(aliasesNumber > 1) {
+        lastAlias = aliases.pop();
+        aliasesStr = aliases.join(',<break strength="strong"/>  ') + ' <break strength="weak"/> and ' + lastAlias;
+      } else {
+        aliasesStr = aliases[0];
+      }
+  
+      if(aliasesNumber === 0) {
+        return noCommands(handlerInput);        
+      }
+
+      return handlerInput.responseBuilder
+        .speak(COMMANDS_MESSAGE1 + aliasesNumber + COMMANDS_MESSAGE2 + machinesNumeber + COMMANDS_MESSAGE3 + ' ' + aliasesStr)
+        .reprompt()
+        .getResponse();
+    } else {
+      return noMachines(handlerInput);
     }
-
-    aliasesStr = aliases.join(', ');
-
-    return handlerInput.responseBuilder
-      .speak(COMMANDS_MESSAGE1 + aliasesnumber + COMMANDS_MESSAGE2 + machinesNumeber + COMMANDS_MESSAGE3 + '. ' + aliasesStr)
-      .reprompt()
-      .getResponse();
   },
 };
 
@@ -143,7 +272,7 @@ handlers.AddMachineHandler = {
     console.log(notPaired);
 
     if(notPaired.length) {
-      token = notPaired[0].Token;
+      token = notPaired[0].PairToken;
     } else {
       token = await generateUniqueToken();
       await db.machines.createMachineToken(userId, token);
@@ -155,6 +284,39 @@ handlers.AddMachineHandler = {
       .speak(PAIR_MESSAGE + speakToken)
       .reprompt(PAIR_REPROMPT1 + speakToken + PAIR_REPROMPT2)
       .getResponse();
+  },
+};
+
+handlers.MachinesListHandler = {
+  canHandle(handlerInput) {
+    const request = handlerInput.requestEnvelope.request;
+    return request.type === 'IntentRequest'
+      && request.intent.name === 'MachinesList';
+  },
+  async handle(handlerInput) {
+    let userId = handlerInput.requestEnvelope.session.user.userId;
+    let pairedMachines = (await db.machines.getAllByUserPaired(userId)).Items;
+    let machinesNumeber = pairedMachines.length;
+
+    if(machinesNumeber > 0) {
+      let machinesNames = pairedMachines.map(machine => machine.MachineName);
+      let lastMachine = '';
+      let machinesStr = '';
+  
+      if(machinesNumeber > 1) {
+        lastMachine = machinesNames.pop();
+        machinesStr = machinesNames.join(',<break strength="strong"/>  ') + ' <break strength="weak"/> and ' + lastMachine;
+      } else {
+        machinesStr = machinesNames[0];
+      }
+  
+      return handlerInput.responseBuilder
+        .speak(MACHINES_MESSAGE1 + machinesNumeber + MACHINES_MESSAGE2 + machinesStr)
+        .reprompt()
+        .getResponse();
+    } else {
+      return noMachines(handlerInput);
+    }
   },
 };
 

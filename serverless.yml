@@ -141,6 +141,20 @@ custom:
                     samples: []
                   - name: AMAZON.FallbackIntent
                     samples: []
+                  - name: RunCommand
+                    slots:
+                      -
+                        name: command
+                        type: AMAZON.SearchQuery
+                    samples:
+                    - run {command}
+                    - run command {command}
+                    - exec {command}
+                    - exec command {command}
+                    - execute {command}
+                    - execute command {command}
+                    - start {command}
+                    - start command {command}
                   - name: CommandsList
                     samples:
                     - list
@@ -158,12 +172,15 @@ custom:
                     - assign machine
                     - connect
                     - connect machine
+                    - pairing
+                    - pairing token
                   - name: MachinesList
                     samples:
                     - list machines
                     - machines
                     - list avaiable machines
                     - avaiable machines
+                    - connected machines
 
 resources:
   Resources:

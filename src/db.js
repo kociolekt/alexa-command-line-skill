@@ -161,6 +161,20 @@ const machines = {
 
         return DDB.query(params).promise();
     },
+    getAllByUserPaired: (userId) => {
+        let params = {
+            TableName: MACHINES_TABLE_NAME,
+            IndexName: 'User',
+            KeyConditionExpression: 'UserId = :userId',
+            ExpressionAttributeValues: {
+                ':userId': userId,
+                ':machineId': 'empty'
+            },
+            FilterExpression: 'MachineId <> :machineId',
+        };
+
+        return DDB.query(params).promise();
+    },
     getAllByMachineId: (machineId) => {
         let params = {
             TableName: MACHINES_TABLE_NAME,
