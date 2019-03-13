@@ -125,19 +125,21 @@ const machines = {
 
         return DDB.update(params).promise();
     },
-    updateMachineAliases: (recordId, connectionId, aliases) => {
+    updateMachineAliases: (recordId, connectionId, machineName, aliases) => {
         var params = {
             TableName: MACHINES_TABLE_NAME,
             Key: { RecordId: recordId },
             ExpressionAttributeNames: {
                 '#connectionId': 'ConnectionId',
-                '#aliases': 'Aliases'
+                '#aliases': 'Aliases',
+                '#machineName': 'MachineName'
             },
             ExpressionAttributeValues: {
               ':connectionId': connectionId,
               ':aliases': aliases,
+              ':machineName': machineName,
             },
-            UpdateExpression: 'set #connectionId = :connectionId, #aliases = :aliases'
+            UpdateExpression: 'set #machineName = :machineName, #connectionId = :connectionId, #aliases = :aliases'
           };
 
         return DDB.update(params).promise();

@@ -21,7 +21,7 @@ exports.handler = action(async (api, connectionId, data) => {
     if (machines.length === 1) {
       let machine = machines[0];
       let recordId = machine.RecordId;
-      await db.machines.updateMachineAliases(recordId, connectionId, aliases);
+      await db.machines.updateMachineAliases(recordId, connectionId, machineName, aliases);
     }
 
     await send(api, connectionId, { action: 'introduce', data: 'Machine introduced' });

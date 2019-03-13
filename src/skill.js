@@ -27,8 +27,9 @@ const MACHINES_MESSAGE1 = 'You have ';
 const MACHINES_MESSAGE2 = ' paired machines: ';
 const NO_COMMAND_FOUND1 = 'Command ';
 const NO_COMMAND_FOUND2 = ' have been not found on any of your machines. Would you like to hear list of your commands?';
-const TOO_MANY_COMMAND_MACHINES1 = 'There are more than two machines with ';
-const TOO_MANY_COMMAND_MACHINES2 = ' command';
+const TOO_MANY_COMMAND_MACHINES1 = 'There are multiple machines with ';
+const TOO_MANY_COMMAND_MACHINES2 = ' command:<break strength="medium"/>';
+const NO_MACHINE_NAME = 'There is no machine with name ';
 const RUNNING_COMMAND1 = 'Started ';
 const RUNNING_COMMAND2 = ' on ';
 const RUNNING_COMMAND_ERROR = 'There was an error while sending the command. ';
@@ -43,6 +44,48 @@ const apigwManagementApi = new AWS.ApiGatewayManagementApi({
 /*
   HELPERS
 */
+
+function getSlotValues(filledSlots) {
+  const slotValues = {};
+
+  console.log(`The filled slots: ${JSON.stringify(filledSlots)}`);
+  Object.keys(filledSlots).forEach((item) => {
+    const name = filledSlots[item].name;
+
+    if (filledSlots[item] &&
+      filledSlots[item].resolutions &&
+      filledSlots[item].resolutions.resolutionsPerAuthority[0] &&
+      filledSlots[item].resolutions.resolutionsPerAuthority[0].status &&
+      filledSlots[item].resolutions.resolutionsPerAuthority[0].status.code) {
+      switch (filledSlots[item].resolutions.resolutionsPerAuthority[0].status.code) {
+        case 'ER_SUCCESS_MATCH':
+          slotValues[name] = {
+            synonym: filledSlots[item].value,
+            resolved: filledSlots[item].resolutions.resolutionsPerAuthority[0].values[0].value.name,
+            isValidated: true,
+          };
+          break;
+        case 'ER_SUCCESS_NO_MATCH':
+          slotValues[name] = {
+            synonym: filledSlots[item].value,
+            resolved: filledSlots[item].value,
+            isValidated: false,
+          };
+          break;
+        default:
+          break;
+      }
+    } else {
+      slotValues[name] = {
+        synonym: filledSlots[item].value,
+        resolved: filledSlots[item].value,
+        isValidated: false,
+      };
+    }
+  }, this);
+
+  return slotValues;
+}
 
 function confirmIntent(handlerInput, intentName) {
   // Save confirm handler in case somebody said 'yes'
@@ -106,7 +149,11 @@ handlers.SessionEndedHandler = {
   COMMANDS HANDLERS
 */
 
-handlers.RunCommandHandler = {
+async function getMachinesForCommand() {
+
+}
+
+handlers.RunCommandInProgressHandler = {
   canHandle(handlerInput) {
     const request = handlerInput.requestEnvelope.request;
     return request.type === 'IntentRequest'
@@ -114,7 +161,20 @@ handlers.RunCommandHandler = {
   },
   async handle(handlerInput) {
     let userId = handlerInput.requestEnvelope.session.user.userId;
-    let command = handlerInput.requestEnvelope.request.intent.slots.command.value;
+    let filledSlots = handlerInput.requestEnvelope.request.intent.slots;
+    let slotValues = getSlotValues(filledSlots);
+    let command = slotValues.command.resolved;
+    let machine = slotValues.machine.resolved;
+
+    // If command is not provided at start of the intent
+    // Get command from dialog
+    if(!command) {
+      const currentIntent = handlerInput.requestEnvelope.request.intent;
+      return handlerInput.responseBuilder
+        .addDelegateDirective(currentIntent)
+        .getResponse();
+    }
+
     let pairedMachines = (await db.machines.getAllByUserPaired(userId)).Items;
     let machinesNumber = pairedMachines.length;
 
@@ -143,12 +203,14 @@ handlers.RunCommandHandler = {
         }
       }
 
+      // Break if no such command
       if(aliasesNumber === 0) {
         return noCommands(handlerInput);
       }
 
       let commandMachines = aliasesMap[command];
 
+      // Break if no machines with this command
       if(!commandMachines || !commandMachines.length) {
         confirmIntent(handlerInput, 'CommandsListHandler');
 
@@ -158,14 +220,36 @@ handlers.RunCommandHandler = {
           .getResponse();
       }
 
-      if(commandMachines.length > 1) {
-        return handlerInput.responseBuilder
-          .speak(TOO_MANY_COMMAND_MACHINES1 + command + TOO_MANY_COMMAND_MACHINES2)
-          .reprompt()
-          .getResponse();
-      }
+      let executionMachine = null;
 
-      let executionMachine = commandMachines[0];
+      // If too many machines... 
+      if(commandMachines.length > 1) {
+        //return handlerInput.responseBuilder
+        //  .speak(TOO_MANY_COMMAND_MACHINES1 + command + TOO_MANY_COMMAND_MACHINES2)
+        //  .reprompt()
+        //  .getResponse();
+
+        // Ask dialog for machine name
+        if(!machine) {
+          const currentIntent = handlerInput.requestEnvelope.request.intent;
+          return handlerInput.responseBuilder
+            .speak(TOO_MANY_COMMAND_MACHINES1 + command + TOO_MANY_COMMAND_MACHINES2 + ' ' + commandMachines.map( machine => machine.MachineName).join(',<break strength="medium"/> '))
+            .addDelegateDirective(currentIntent)
+            .getResponse();
+        }
+
+        executionMachine = commandMachines.find( currentMachine => currentMachine.MachineName === machine);
+
+        // End if no such machine
+        if(!executionMachine) {
+          return handlerInput.responseBuilder
+            .speak(NO_MACHINE_NAME + ' ' + machine)
+            .reprompt()
+            .getResponse();
+        }
+      } else {
+        executionMachine = commandMachines[0];
+      }
 
       try {
         await run(apigwManagementApi, executionMachine.ConnectionId, command);
@@ -178,7 +262,7 @@ handlers.RunCommandHandler = {
       }
 
       return handlerInput.responseBuilder
-        .speak(RUNNING_COMMAND1 + command + RUNNING_COMMAND2 + commandMachines[0].MachineName)
+        .speak(RUNNING_COMMAND1 + command + RUNNING_COMMAND2 + executionMachine.MachineName)
         .reprompt()
         .getResponse();
     } else {
