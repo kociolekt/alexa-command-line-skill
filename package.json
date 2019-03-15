@@ -1,7 +1,15 @@
 {
-  "name": "cli-alexa-skill",
+  "name": "alexa-command-line-skill",
   "version": "1.0.0",
-  "main": "index.js",
+  "description": "Alexa Command Line Skill. Connects with clients and invokes commands.",
+  "keywords": [
+    "alexa",
+    "skill",
+    "command line",
+    "terminal",
+    "client"
+  ],
+  "main": "skill.js",
   "dependencies": {
     "ask-sdk": "^2.4.0",
     "aws-sdk": "^2.411.0",
@@ -18,8 +26,7 @@
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
   },
-  "author": "",
-  "license": "MIT",
-  "keywords": [],
-  "description": ""
+  "author": "Tomasz Kociołek",
+  "license": "ISC",
+  "repository": "github:kociolekt/alexa-command-line-skill"
 }

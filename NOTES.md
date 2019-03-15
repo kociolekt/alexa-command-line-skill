@@ -65,9 +65,9 @@ Let's create first lambda function with serverless!
 
 ### Create serverless.yml
 Full serverless.yml example is available here: https://serverless.com/framework/docs/providers/aws/guide/serverless.yml/ but you'll need only a fraction of this.
-For first example we'll create Alexa skill!
-1. Create package.json and install dependencies
-```
-npm init -f
-npm install serverless-alexa-skills
-```
+
+Here are some examples:
+
+Example 1 - https://github.com/kociolekt/serverless-presentation/tree/master/example
+
+Example 2 - https://github.com/kociolekt/serverless-presentation/tree/master/example2
