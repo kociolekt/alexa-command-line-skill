@@ -87,12 +87,6 @@ functions:
     handler: src/onPair.handler
     events:
       - websocket: pair
-  # hsendMessage - echo function for testing
-# {"action": "sendMessage", "data": "test"}
-  sendMessage:
-    handler: src/sendMessage.handler
-    events:
-      - websocket: sendMessage
 
   # TODO:
   # just in case we are getting weird / bad data
